@@ -4,6 +4,10 @@ resource "random_password" "vm-admin-password" {
   override_special = "!#$%&*()-_=+[]{}<>:?"
 }
 
+resource "random_id" "kv-name" {
+  byte_length = 4
+}
+
 resource "azurerm_resource_group" "rg-lab" {
   name     = var.rg-name
   location = "East US"
@@ -19,29 +23,46 @@ resource "azurerm_virtual_network" "lab" {
 resource "azurerm_subnet" "lab" {
   name                 = "internal"
   resource_group_name  = azurerm_resource_group.rg-lab.name
-  virtual_network_name = azurerm_virtual_network.rg-lab.name
+  virtual_network_name = azurerm_virtual_network.lab.name
   address_prefixes     = ["10.0.2.0/24"]
 }
 
 resource "azurerm_key_vault" "kv-lab" {
-  name                       = "kv-lab"
+  name                       = "${var.kv-name}-${lower(random_id.kv-name.hex)}"
   location                   = azurerm_resource_group.rg-lab.location
   resource_group_name        = azurerm_resource_group.rg-lab.name
   tenant_id                  = data.azurerm_client_config.current.tenant_id
   sku_name                   = "standard"
   soft_delete_retention_days = 7
   enabled_for_deployment     = "true"
-  enable_rbac_authorization  = "true"
+  enable_rbac_authorization  = "false"
   purge_protection_enabled = "false"
 
   network_acls {
     bypass = "AzureServices"
-    default_action = "Deny"
-    virtual_network_subnet_ids = azurerm_subnet.lab.id
+    default_action = "Allow"
   }
 
   depends_on = [
     azurerm_subnet.lab
+  ]
+}
+
+resource "azurerm_key_vault_access_policy" "kv-lab-automation" {
+  key_vault_id = azurerm_key_vault.kv-lab.id
+  tenant_id    = data.azurerm_client_config.current.tenant_id
+  object_id    = data.azurerm_client_config.current.object_id
+
+  key_permissions = [
+    "Get",
+    "Import",
+    "List",
+  ]
+
+  secret_permissions = [
+    "List",
+    "Get",
+    "Set",
   ]
 }
 
@@ -81,7 +102,7 @@ resource "azurerm_windows_virtual_machine" "lab" {
   location            = azurerm_resource_group.rg-lab.location
   size                = "Standard_F2"
   admin_username      = "adminuser"
-  admin_password      = "${azurerm.key_vault_secret.kv-secret-vm}"
+  admin_password      = azurerm_key_vault_secret.kv-secret-admin-vm.value
   network_interface_ids = [
     azurerm_network_interface.lab.id,
   ]
@@ -96,6 +117,10 @@ resource "azurerm_windows_virtual_machine" "lab" {
     offer     = "WindowsServer"
     sku       = "2019-Datacenter"
     version   = "latest"
+  }
+  
+  tags = {
+    role = "web"
   }
 
   depends_on = [

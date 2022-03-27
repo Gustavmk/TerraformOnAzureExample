@@ -33,6 +33,10 @@ override.tf.json
 .terraformrc
 terraform.rc
 
+# Ignore Terraform Lock HCL
+*.terraform.lock.hcl
+
+*tfplan*
 
 # Ansible env file
 *.env.local

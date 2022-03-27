@@ -7,3 +7,8 @@ variable "available-zones" {
     type = list(string)
     default = [ "East US" ]
 }
+
+variable "kv-name" {
+    type = string
+    default = "lab"
+}
