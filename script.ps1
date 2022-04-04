@@ -4,55 +4,36 @@ $file = "$env:temp\ConfigureRemotingForAnsible.ps1"
 powershell.exe -ExecutionPolicy ByPass -File $file -DisableBasicAuth -EnableCredSSP
 
 
-$RuleList = @()
+$RuleList = @(
+    [pscustomobject]@{DisplayName='Windows Remote Management (HTTP-In)'; Direction='Inbound'; LocalPort='5985'; Protocol='TCP'; Action='Allow'; Program='System'}
+    [pscustomobject]@{DisplayName='Windows Remote Management (HTTPS-In)'; Direction='Inbound'; LocalPort='5986'; Protocol='TCP'; Action='Allow'; Program='System'}
+    [pscustomobject]@{DisplayName='WEB - HTTPS'; Direction='Inbound'; LocalPort='443'; Protocol='TCP'; Action='Allow'; Program='System'}
+    [pscustomobject]@{DisplayName='WEB - HTTP - CUSTOM 8080'; Direction='Inbound'; LocalPort='8080'; Protocol='TCP'; Action='Allow'; Program='System'}
+    [pscustomobject]@{DisplayName='DOCKER - MGMT- SSL'; Direction='Inbound'; LocalPort='2376'; Protocol='TCP'; Action='Allow'; Program='System'}
+    #[pscustomobject]@{DisplayName=''; Direction=''; LocalPort=''; Protocol=''; Action=''; Program=''}
+)
 
-$FirewallParam = @{
-    DisplayName = 'Windows Remote Management (HTTP-In)'
-    Direction = 'Inbound'
-    LocalPort = 5985
-    Protocol = 'TCP'
-    Action = 'Allow'
-    Program = 'System'
-}
-New-NetFirewallRule @FirewallParam
+Foreach ($rule in $RuleList) {
+    $FirewallParam = @{
+        DisplayName     = $Rule.DisplayName
+        Direction       = $Rule.Direction
+        LocalPort       = $Rule.LocalPort
+        Protocol        = $Rule.Protocol
+        Action          = $Rule.Action
+        Program         = $Rule.Program
+    }
 
-$FirewallParam = @{
-    DisplayName = 'Windows Remote Management (HTTPS-In)'
-    Direction = 'Inbound'
-    LocalPort = 5986
-    Protocol = 'TCP'
-    Action = 'Allow'
-    Program = 'System'
+    New-NetFirewallRule @FirewallParam
 }
-New-NetFirewallRule @FirewallParam
 
-$FirewallParam = @{
-    DisplayName = 'HTTPS'
-    Direction = 'Inbound'
-    LocalPort = 443
-    Protocol = 'TCP'
-    Action = 'Allow'
-    Program = 'System'
-}
-New-NetFirewallRule @FirewallParam
-
-$FirewallParam = @{
-    DisplayName = 'HTTP'
-    Direction = 'Inbound'
-    LocalPort = 8080
-    Protocol = 'TCP'
-    Action = 'Allow'
-    Program = 'System'
-}
-New-NetFirewallRule @FirewallParam
-
-$FirewallParam = @{
-    DisplayName = 'Docker SSL Inbound'
-    Direction = 'Inbound'
-    LocalPort = 2376
-    Protocol = 'TCP'
-    Action = 'Allow'
-    Program = 'System'
-}
-New-NetFirewallRule @FirewallParam
+#$FirewallParam = @{
+#    DisplayName = 'Windows Remote Management (HTTP-In)'
+#    Direction = 'Inbound'
+#    LocalPort = 5985
+#    Protocol = 'TCP'
+#    Action = 'Allow'
+#    Program = 'System'
+#}
+#
+#New-NetFirewallRule @FirewallParam
 

@@ -36,10 +36,10 @@ resource "azurerm_key_vault" "kv-lab" {
   soft_delete_retention_days = 7
   enabled_for_deployment     = "true"
   enable_rbac_authorization  = "false"
-  purge_protection_enabled = "false"
+  purge_protection_enabled   = "false"
 
   network_acls {
-    bypass = "AzureServices"
+    bypass         = "AzureServices"
     default_action = "Allow"
   }
 
@@ -97,10 +97,10 @@ resource "azurerm_network_interface" "lab" {
 }
 
 resource "azurerm_windows_virtual_machine" "lab" {
-  name                = "lab-machine"
+  name                = "lab-machine2"
   resource_group_name = azurerm_resource_group.rg-lab.name
   location            = azurerm_resource_group.rg-lab.location
-  size                = "Standard_F2"
+  size                = "Standard_B2s"
   admin_username      = "adminuser"
   admin_password      = azurerm_key_vault_secret.kv-secret-admin-vm.value
   network_interface_ids = [
@@ -118,7 +118,7 @@ resource "azurerm_windows_virtual_machine" "lab" {
     sku       = "2019-Datacenter"
     version   = "latest"
   }
-  
+
   tags = {
     role = "web"
   }
@@ -128,6 +128,25 @@ resource "azurerm_windows_virtual_machine" "lab" {
   ]
 }
 
+#resource "azurerm_virtual_machine_extension" "vm-winrm" {
+#  name                 = "WinRM-Ansible"
+#  virtual_machine_id   = azurerm_windows_virtual_machine.lab.id
+#  publisher            = "Microsoft.Compute"
+#  type                 = "CustomScriptExtension"
+#  type_handler_version = "1.9"
+#
+#  protected_settings = <<EOF
+#    {
+#        "commandToExecute": "powershell -command \"[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('${base64encode(data.template_file.tf.rendered)}')) | Out-File -filepath script.ps1\" && powershell -ExecutionPolicy Unrestricted -File script.ps1"
+#    }
+#    EOF
+#  depends_on = [
+#    azurerm_windows_virtual_machine.lab
+#  ]
+#}
+
+
+/*
 resource "azurerm_virtual_machine_extension" "vm-winrm" {
   name                 = "WinRM-Ansible"
   virtual_machine_id   = azurerm_windows_virtual_machine.lab.id
@@ -135,13 +154,35 @@ resource "azurerm_virtual_machine_extension" "vm-winrm" {
   type                 = "CustomScriptExtension"
   type_handler_version = "1.9"
 
-  protected_settings = <<EOF
-    {
-        "commandToExecute": "powershell -command \"[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('${base64encode(data.template_file.tf.rendered)}')) | Out-File -filepath script.ps1\" && powershell -ExecutionPolicy Unrestricted -File script.ps1"
-    }
-    EOF
+  protected_settings = <<SETTINGS
+  {
+     "commandToExecute": "powershell -encodedCommand ${textencodebase64(file("script.ps1"), "UTF-16LE")}"
+  }
+  SETTINGS
+
+  depends_on = [
+    azurerm_windows_virtual_machine.lab
+  ]
+}
+*/
+
+resource "azurerm_virtual_machine_extension" "vm-winrm" {
+  name                       = "WinRM-Ansible"
+  virtual_machine_id         = azurerm_windows_virtual_machine.lab.id
+  publisher                  = "Microsoft.Compute"
+  type                       = "CustomScriptExtension"
+  type_handler_version       = "1.10"
+  auto_upgrade_minor_version = true
+
+  protected_settings = <<SETTINGS
+  {
+     "commandToExecute": "powershell -encodedCommand ${textencodebase64("${data.template_file.tf.rendered}", "UTF-16LE")}"
+  }
+  SETTINGS
+
   depends_on = [
     azurerm_windows_virtual_machine.lab
   ]
 }
 
+# "commandToExecute": "powershell -encodedCommand ${textencodebase64(file("script.ps1"), "UTF-16LE")}"
