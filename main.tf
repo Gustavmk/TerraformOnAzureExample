@@ -72,7 +72,8 @@ resource "azurerm_key_vault_secret" "kv-secret-admin-vm" {
   key_vault_id = azurerm_key_vault.kv-lab.id
 
   depends_on = [
-    azurerm_key_vault.kv-lab
+    azurerm_key_vault.kv-lab,
+    azurerm_key_vault_access_policy.kv-lab-automation
   ]
 }
 
