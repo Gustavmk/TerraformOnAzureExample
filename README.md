@@ -21,6 +21,7 @@ services:
 Run
 
 ```Bash
+docker-compose run --rm ansiblecontainer "terraform fmt ; terraform validate"
 docker-compose run --rm ansiblecontainer "terraform init"
 docker-compose run --rm ansiblecontainer "terraform plan -out plan.tfplan"
 docker-compose run --rm ansiblecontainer "terraform apply plan.tfplan"

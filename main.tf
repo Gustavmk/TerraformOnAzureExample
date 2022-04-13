@@ -1,7 +1,13 @@
+# ref: https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/password
 resource "random_password" "vm-admin-password" {
   length           = 16
   special          = true
   override_special = "!#$%&*()-_=+[]{}<>:?"
+}
+
+variable "count_web" {
+  type    = string
+  default = "3"
 }
 
 resource "random_id" "kv-name" {
@@ -78,14 +84,16 @@ resource "azurerm_key_vault_secret" "kv-secret-admin-vm" {
 }
 
 resource "azurerm_public_ip" "lab-pip" {
-  name                = "lab-pip"
+  count               = var.count_web
+  name                = "pip-lab-${count.index}"
   resource_group_name = azurerm_resource_group.rg-lab.name
   location            = azurerm_resource_group.rg-lab.location
   allocation_method   = "Static"
 }
 
 resource "azurerm_network_interface" "lab" {
-  name                = "lab-nic"
+  count               = var.count_web
+  name                = "lab-nic-${count.index}"
   location            = azurerm_resource_group.rg-lab.location
   resource_group_name = azurerm_resource_group.rg-lab.name
 
@@ -93,19 +101,23 @@ resource "azurerm_network_interface" "lab" {
     name                          = "internal"
     subnet_id                     = azurerm_subnet.lab.id
     private_ip_address_allocation = "Dynamic"
-    public_ip_address_id          = azurerm_public_ip.lab-pip.id
+    public_ip_address_id          = element(azurerm_public_ip.lab-pip.*.id, count.index)
   }
 }
 
 resource "azurerm_windows_virtual_machine" "lab" {
-  name                = "lab-machine2"
+  count = var.count_web
+
+  name                = "labweb${count.index}"
   resource_group_name = azurerm_resource_group.rg-lab.name
   location            = azurerm_resource_group.rg-lab.location
   size                = "Standard_B2s"
   admin_username      = "adminuser"
   admin_password      = azurerm_key_vault_secret.kv-secret-admin-vm.value
+  timezone            = "E. South America Standard Time"
+
   network_interface_ids = [
-    azurerm_network_interface.lab.id,
+    element(azurerm_network_interface.lab.*.id, count.index)
   ]
 
   winrm_listener {
@@ -113,7 +125,7 @@ resource "azurerm_windows_virtual_machine" "lab" {
   }
 
   os_disk {
-    name                 = "lab-machine2_OsDisk"
+    name                 = "OS_Disk_Lab${count.index}"
     caching              = "ReadWrite"
     storage_account_type = "Standard_LRS"
     disk_size_gb         = 128
@@ -136,8 +148,10 @@ resource "azurerm_windows_virtual_machine" "lab" {
 }
 
 resource "azurerm_virtual_machine_extension" "vm-winrm" {
+  count = var.count_web
+
   name                       = "WinRM-Ansible"
-  virtual_machine_id         = azurerm_windows_virtual_machine.lab.id
+  virtual_machine_id         = element(azurerm_windows_virtual_machine.lab.*.id, count.index)
   publisher                  = "Microsoft.Compute"
   type                       = "CustomScriptExtension"
   type_handler_version       = "1.10"
@@ -155,6 +169,7 @@ resource "azurerm_virtual_machine_extension" "vm-winrm" {
 }
 
 
+/*
 resource "azurerm_storage_account" "storage_account" {
   name                = "${var.stg-name}${lower(random_id.kv-name.hex)}"
   resource_group_name = azurerm_resource_group.rg-lab.name
@@ -174,7 +189,7 @@ resource "azurerm_storage_share" "files" {
   quota                = 10
 }
 
-/*
+
 locals {
   connect_file_share_script = templatefile("connect-azure-file-share.tpl.ps1", {
     storage_account_file_host = azurerm_storage_account.storage_account.primary_file_host
