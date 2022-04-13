@@ -18,10 +18,10 @@ services:
       - ARM_CLIENT_SECRET=${ARM_CLIENT_SECRET}
 ```
 
-Run 
+Run
+
 ```Bash
 docker-compose run --rm ansiblecontainer "terraform init"
 docker-compose run --rm ansiblecontainer "terraform plan -out plan.tfplan"
 docker-compose run --rm ansiblecontainer "terraform apply plan.tfplan"
 ```
-
