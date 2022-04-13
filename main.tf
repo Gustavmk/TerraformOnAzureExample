@@ -7,7 +7,7 @@ resource "random_password" "vm-admin-password" {
 
 variable "count_web" {
   type    = string
-  default = "3"
+  default = "4"
 }
 
 resource "random_id" "kv-name" {

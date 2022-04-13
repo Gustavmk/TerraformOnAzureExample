@@ -18,7 +18,17 @@ services:
       - ARM_CLIENT_SECRET=${ARM_CLIENT_SECRET}
 ```
 
-Run
+## Before run"
+
+```Bash
+export ARM_SUBSCRIPTION_ID=
+export ARM_CLIENT_SECRET=
+export ARM_CLIENT_ID=
+export ARM_TENANT_ID=
+
+```
+
+## Run
 
 ```Bash
 docker-compose run --rm ansiblecontainer "terraform fmt ; terraform validate"
