@@ -1,0 +1,10 @@
+rg-name = "LAB-EASTUS"
+
+available-zones = [
+    "zone1",
+    "zone2"
+]
+
+kv-name = "lab"
+
+stg-name = "lab"
